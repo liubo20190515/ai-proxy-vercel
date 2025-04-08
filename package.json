@@ -1,0 +1,21 @@
+{
+  "name": "ai-proxy",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node ./dist/server.js",
+    "dev": "bunx tsx --watch ./server.ts",
+    "build": "bun build ./server.ts ./main.ts --outdir dist --packages external"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "prettier": "^3.5.3",
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.14.0",
+    "@hono/zod-validator": "^0.4.3",
+    "hono": "^4.7.5",
+    "zod": "^3.24.2"
+  }
+}
