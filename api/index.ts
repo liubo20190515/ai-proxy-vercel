@@ -1,5 +1,5 @@
 import { handle } from "hono/vercel"; // Use the generic Vercel adapter for Edge
-import app from "../main.ts"; // <-- Import source TS directly
+import app from "../main"; // <-- Import without .ts extension
 
 export default handle(app);
 
