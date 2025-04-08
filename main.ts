@@ -34,7 +34,6 @@ const fetchWithTimeout = async (
     const res = await proxy(url, {
       ...options,
       signal: controller.signal,
-      duplex: "half",
     })
     clearTimeout(timeoutId)
     return res
