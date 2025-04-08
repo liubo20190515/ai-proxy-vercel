@@ -1,5 +1,5 @@
 import { handle } from "hono/vercel"; // Use the generic Vercel adapter for Edge
-import app from "../dist/main.js"; // <-- Point back to compiled JS in dist
+import app from "../main.ts"; // <-- Import source TS directly
 
 export default handle(app);
 
@@ -7,3 +7,4 @@ export default handle(app);
 export const config = {
   runtime: "edge",
 };
+
