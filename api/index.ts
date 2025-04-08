@@ -1,6 +1,4 @@
-import { handle } from "@hono/node-server/vercel";
-import app from "../main.js"; // Point to the test file
+import { handle } from "hono/vercel"; // Use the generic Vercel adapter for Edge
+import app from "../main.js"; // Point to the main file
 
 export default handle(app);
-
-

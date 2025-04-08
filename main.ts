@@ -140,16 +140,8 @@ app.use(async (c, next) => {
     const targetUrl = `${proxy.target}${targetPath}${url.search}`
     console.log(`[Proxy Middleware] Forwarding to target URL: ${targetUrl}`);
     console.log(`[Proxy Middleware] Original Host header: ${originalHost}`);
+    // console.log('[Proxy Middleware] Forwarding headers (excluding sensitive):', /* Consider logging specific non-sensitive headers if needed */);
 
-    // --- START TEST MODIFICATION ---
-    console.log("[Proxy Middleware] TEST: Skipping actual fetch, returning dummy response.");
-    return new Response(JSON.stringify({ message: "Skipped fetch - Test successful" }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" }
-    });
-    // --- END TEST MODIFICATION ---
-
-    /* // Original fetch call commented out
     try {
       const res = await fetchWithTimeout(
         targetUrl,
@@ -173,7 +165,6 @@ app.use(async (c, next) => {
        console.error('[Proxy Middleware] Error during fetchWithTimeout:', error);
        return new Response("Proxy fetch error", { status: 502 }); // Bad Gateway
     }
-    */
 
   } else {
     console.log(`[Proxy Middleware] No matching proxy config found for pathname: ${url.pathname}`);
