@@ -1,9 +1,10 @@
-import { Hono } from "hono"
-import { cors } from "hono/cors"
-import { zValidator } from "@hono/zod-validator"
-import { z } from "zod"
-import { logger } from "hono/logger"
-import { proxy } from 'hono/proxy'
+#!/usr/bin/env node
+import { Hono, Context, Next } from "hono";
+import { cors } from "hono/cors";
+import { zValidator } from "@hono/zod-validator";
+import { z } from "zod";
+import { logger } from "hono/logger";
+import { proxy } from 'hono/proxy';
 
 
 const app = new Hono()
@@ -12,12 +13,12 @@ app.use(cors())
 
 app.use(logger())
 
-app.use(async (c, next) => {
+app.use(async (c: Context, next: Next) => {
   await next()
   c.res.headers.set("X-Accel-Buffering", "no")
 })
 
-app.get("/", (c) => c.text("A proxy for AI!"))
+app.get("/", (c: Context) => c.text("A proxy for AI!"))
 
 const fetchWithTimeout = async (
   url: string,
@@ -33,7 +34,6 @@ const fetchWithTimeout = async (
     const res = await proxy(url, {
       ...options,
       signal: controller.signal,
-      // @ts-expect-error
       duplex: "half",
     })
     clearTimeout(timeoutId)
@@ -99,7 +99,7 @@ app.post(
       url: z.string().url(),
     }),
   ),
-  async (c) => {
+  async (c: Context) => {
     const { url } = c.req.valid("query")
 
     const res = await proxy(url, {
@@ -115,8 +115,10 @@ app.post(
   },
 )
 
-app.use(async (c, next) => {
+app.use(async (c: Context, next: Next) => {
+  console.log(`[Proxy Middleware] Received request: ${c.req.method} ${c.req.url}`);
   const url = new URL(c.req.url)
+  console.log(`[Proxy Middleware] Parsed URL pathname: ${url.pathname}, hostname: ${url.hostname}`);
 
   const proxy = proxies.find(
     (p) =>
@@ -125,33 +127,56 @@ app.use(async (c, next) => {
   )
 
   if (proxy) {
+    console.log(`[Proxy Middleware] Found matching proxy config for pathSegment: ${proxy.pathSegment}`);
     const headers = new Headers(c.req.raw.headers)
     if (proxy.pathSegment === "anthropic") {
       headers.delete("origin")
     }
+    // Log original host before deleting
+    const originalHost = headers.get('host');
     headers.delete('content-length')
     headers.delete('host')
 
-    const res = await fetchWithTimeout(
-      `${proxy.target}${url.pathname.replace(
-        `/${proxy.pathSegment}/`,
-        "/",
-      )}${url.search}`,
-      {
-        method: c.req.method,
-        headers,
-        body: c.req.raw.body,
-        timeout: 60000,
-      },
-    )
+    const targetPath = url.pathname.replace(`/${proxy.pathSegment}/`, "/")
+    const targetUrl = `${proxy.target}${targetPath}${url.search}`
+    console.log(`[Proxy Middleware] Forwarding to target URL: ${targetUrl}`);
+    console.log(`[Proxy Middleware] Original Host header: ${originalHost}`);
+    // console.log('[Proxy Middleware] Forwarding headers (excluding sensitive):', /* Consider logging specific non-sensitive headers if needed */);
 
-    return new Response(res.body, {
-      headers: res.headers,
-      status: res.status,
-    })
+    try {
+      const res = await fetchWithTimeout(
+        targetUrl,
+        {
+          method: c.req.method,
+          headers, // Forward modified headers
+          body: c.req.raw.body,
+          timeout: 60000,
+        },
+      )
+
+      console.log(`[Proxy Middleware] Received response from target: Status ${res.status}`);
+      // Clone headers to avoid issues if they are consumed
+      const responseHeaders = new Headers(res.headers);
+
+      return new Response(res.body, {
+        headers: responseHeaders,
+        status: res.status,
+      })
+    } catch (error) {
+       console.error('[Proxy Middleware] Error during fetchWithTimeout:', error);
+       return new Response("Proxy fetch error", { status: 502 }); // Bad Gateway
+    }
+
+  } else {
+    console.log(`[Proxy Middleware] No matching proxy config found for pathname: ${url.pathname}`);
   }
 
-  next()
+  // Call next middleware only if no proxy was matched or if proxy logic intends to fall through (which it doesn't here, it returns)
+  // Correction: Need to call next() if NO proxy is found
+  if (!proxy) {
+    await next();
+  }
+  // If proxy WAS found, the return statement above prevents next() from being called, which is correct.
 })
 
 export default app
