@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { Hono, Context, Next } from "hono";
+import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
@@ -13,12 +13,12 @@ app.use(cors())
 
 app.use(logger())
 
-app.use(async (c: Context, next: Next) => {
+app.use(async (c, next) => {
   await next()
   c.res.headers.set("X-Accel-Buffering", "no")
 })
 
-app.get("/", (c: Context) => c.text("A proxy for AI!"))
+app.get("/", (c) => c.text("A proxy for AI!"))
 
 const fetchWithTimeout = async (
   url: string,
@@ -99,7 +99,7 @@ app.post(
       url: z.string().url(),
     }),
   ),
-  async (c: Context) => {
+  async (c) => {
     const { url } = c.req.valid("query")
 
     const res = await proxy(url, {
@@ -115,7 +115,7 @@ app.post(
   },
 )
 
-app.use(async (c: Context, next: Next) => {
+app.use(async (c, next) => {
   console.log(`[Proxy Middleware] Received request: ${c.req.method} ${c.req.url}`);
   const url = new URL(c.req.url)
   console.log(`[Proxy Middleware] Parsed URL pathname: ${url.pathname}, hostname: ${url.hostname}`);
